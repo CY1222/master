@@ -1,0 +1,69 @@
+
+local_time=proc.time()
+get_path=function(model,tree_index,ID_index)
+{
+  sub_tree=getTree(model,k=tree_index,labelVar=TRUE)
+  i=1
+  k=1
+  
+  split=c()
+  while(i<nrow(sub_tree)&i!=0&(1-is.na(sub_tree[i,3])))
+  {split[k]=as.character(sub_tree[i,3])
+  if(ID_index[,which(names(ID_index)==split[k])]==sub_tree[i,4]){i=sub_tree[i,2]} else if(ID_index[,which(names(ID_index)==split[k])]!=sub_tree[i,4]){i=sub_tree[i,1]}
+  k=k+1
+  }
+  output=matrix(nrow=2,ncol=length(split))
+  output[1,]=split
+  output[2,1]=sub_tree[i,6]
+  return(output)
+}
+
+
+
+
+local=function(model,data,i,n){
+  ma_tmp=matrix(nrow = 500,ncol = ncol(data))
+  k=1
+  g=1
+  rf_data_yhat=predict(model,data)
+  while(k<=500)
+  {
+    if(get_path(model,k,data[i,])[2,1]==rf_data_yhat[i])
+    {
+      ma_tmp[g,1:length(get_path(model,k,data[i,])[1,])]=get_path(model,k,data[i,])[1,]
+      g=g+1
+    }
+    k=k+1
+  }
+  ma_tmp=ma_tmp[which(is.na(ma_tmp[,1])==0),]
+  kk=1
+  while (prod(is.na(ma_tmp[,kk]))==0&kk<ncol(ma_tmp)) {
+    kk=kk+1
+  }
+  ma_tmp=ma_tmp[,1:(kk-1)]
+  local_feature_score=matrix(nrow=4,ncol=(ncol(data)-1))
+  for (h in 1:(ncol(data)-1)) {
+    local_feature_score[1,h]=mean(which(ma_tmp==names(data)[h],arr.ind = T)[,2])
+    local_feature_score[2,h]=nrow(which(ma_tmp==names(data)[h],arr.ind = T))
+  }
+  local_feature_score[1,]=(as.numeric(local_feature_score[1,])-mean(as.numeric(local_feature_score[1,]),na.rm=T))/sd(as.numeric(local_feature_score[1,]),na.rm=T)
+  local_feature_score[1,]=-local_feature_score[1,]
+  local_feature_score[2,]=(local_feature_score[2,]-mean(as.numeric(local_feature_score[2,])))/sd(as.numeric(local_feature_score[2,]))
+  local_feature_score[3,]=as.numeric(local_feature_score[1,])+as.numeric(local_feature_score[2,])
+  local_feature_score[4,]=as.numeric(data[i,-ncol(data)])-1
+  
+  local_feature_score=as.data.frame(local_feature_score)
+  names(local_feature_score)=names(data[i,-ncol(data)])
+  row.names(local_feature_score)=c("score","frequency","V3","object")
+
+  local_feature_score=local_feature_score[,order(as.numeric(local_feature_score[3,]),decreasing = T)]
+  local_feature_score["reference",1]=as.integer(data[i,ncol(data)])-1
+  local_feature_score["predict",1]=as.integer(rf_data_yhat[i])-1
+  return(local_feature_score[3:6,1:n])
+}
+
+
+local_time=proc.time()
+local_1_4=local(model,data,1,10)
+
+local_time=proc.time()-local_time
