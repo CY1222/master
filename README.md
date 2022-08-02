@@ -2,4 +2,4 @@
 code & photo
 
 
-these are all the picture and code for my thesis
+these are all the picture and code of my thesis
