@@ -1,5 +1,5 @@
 # master
-code & photo
+code & figure
 
 
-these are all the picture and code of my thesis
+these are all the figure and code of my thesis
